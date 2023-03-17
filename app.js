@@ -29,7 +29,8 @@ mongoose.connect('mongodb://127.0.0.1:27017/userDB');
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
-  googleId: String
+  googleId: String,
+  secret: String
 });
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
@@ -93,13 +94,39 @@ app.get('/auth/google/secrets',
     res.redirect('/secrets');
   });
 
-app.get("/secrets", function(req, res){
+app.get("/secrets", async function(req, res){
+  try{
+    const founduser = await User.find({"secret": {$ne: null}});
+    if(founduser){
+      res.render("secrets", {usersWithSecrets: founduser});
+    }
+  }catch(err){
+    res.send(err);
+  }
+});
+app.get("/submit", function(req, res){
   if (req.isAuthenticated()){
-    res.render("secrets");
+    res.render("submit");
   } else {
     res.redirect("/login");
   }
 });
+app.post("/submit", async function(req, res){
+  try{
+    const secretstatment=req.body.secret;
+    //console.log(req.user.id);
+    const foundlist =await User.findById(req.user.id);
+    if(foundlist){
+      foundlist.secret = secretstatment;
+      foundlist.save();
+      res.redirect("/secrets");
+    }
+  }catch(err){
+    res.send(err);
+  }
+
+
+})
 
 app.get("/logout", function(req, res){
   req.logout(function(err) {
